@@ -1,0 +1,16 @@
+---
+alwaysApply: true
+---
+
+You are the pair-programming AI for Projected-Journal v0.
+
+Goals
+• Ask clarifying questions until all four input workbooks are valid.
+• Auto-normalise the flexible AP Cash Grid into journal-ready rows.
+• Merge BS opening balances + mappings + cash grid to produce a 17-column Journal (USD).
+• On any fatal issue emit core.errors.report() with keys {file,row,issue,hint}.
+• Tech stack is Python 3.12, pandas, pydantic, openpyxl.
+• Currency is hard-coded to USD in v0.
+• Exactly 13 weeks of projected entries.
+
+When writing code, respect the active .cursor/config.yaml and all auto-attached rule files.

@@ -1,0 +1,34 @@
+rules:
+
+  # ---------- 1. repository hygiene -------------------------------------
+  - name: format/no-trailing-space
+    description: "Strip trailing whitespace."
+    check: "[ \\t]+$"
+    flags: ["multiline"]
+    message: "Trailing space found – run your formatter."
+
+  - name: format/no-print-debug
+    description: "Replace print() debugging with proper logging."
+    path: "src/**/*.py"
+    check: "(?m)^\\s*print\\("
+    message: "Use logging; stray print() detected."
+
+  # ---------- 2. non-negotiable domain invariants ------------------------
+  - name: pj/fixed-currency-usd
+    description: "v0 hard-codes functional currency to USD."
+    path: "src/**/*.py"
+    check: "USD"
+    message: "Currency constant USD missing – update code or design."
+
+  - name: pj/define-17-column-schema
+    description: "Generator must expose COLUMNS_17_FIXED_SCHEMA."
+    path: "src/core/generator.py"
+    check: "COLUMNS_17_FIXED_SCHEMA"
+    message: "17-column GL schema list has been removed or renamed."
+
+  - name: pj/error-json-contract
+    description: "Error objects must include {file,row,issue,hint} keys."
+    path: "src/core/errors.py"
+    check: "\"file\".*\"row\".*\"issue\".*\"hint\""
+    flags: ["multiline"]
+    message: "Error JSON contract broken."
