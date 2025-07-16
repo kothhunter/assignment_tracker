@@ -135,15 +135,34 @@ def load_ap_cash_grid(path: str) -> List[APGridEvent]:
     Raises:
         SchemaError: If auto-detection fails or required fields missing
     """
-    df = load_workbook(path)
+    from .normaliser import normalise_cash_grid
     
-    # TODO: Auto-detect column mapping for flexible schema
-    # TODO: Must identify at minimum: date, description, amount, DCFlag columns
-    # TODO: Parse and validate data according to APGridEvent schema
-    # TODO: Apply normalization rules from cash-grid-normaliser
+    # Load the raw workbook
+    df_raw = load_workbook(path)
     
-    # Placeholder implementation
-    return []
+    # Extract sheet name from file path for transaction type inference
+    file_name = Path(path).stem.lower()
+    sheet_name = file_name if any(keyword in file_name for keyword in ['ap', 'ar', 'payable', 'receivable']) else None
+    
+    # Normalize the cash grid data
+    df_normalized = normalise_cash_grid(df_raw, sheet_name=sheet_name)
+    
+    # Convert normalized data to APGridEvent objects
+    ap_events = []
+    for _, row in df_normalized.iterrows():
+        # Map normalized columns to APGridEvent fields
+        # Note: This mapping may need adjustment based on APGridEvent model requirements
+        event = APGridEvent(
+            transaction_date=row['scheduled_date'],
+            description=f"{row['txn_type']} - {row['counterparty']}",
+            amount=row['amount'],
+            dc_flag='D' if row['txn_type'] == 'AP' else 'C',  # AP = Debit, AR = Credit
+            vendor_id=row['counterparty'] if row['txn_type'] == 'AP' else None,
+            reference=row['line_source']
+        )
+        ap_events.append(event)
+    
+    return ap_events
 
 
 def load_all_workbooks(bs_path: str, gaap_path: str, cf_path: str, ap_path: str) -> DataBundle:

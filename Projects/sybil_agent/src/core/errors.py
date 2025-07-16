@@ -38,6 +38,22 @@ class MappingConflict(Exception):
         self.errors = errors or []
 
 
+class UnsupportedGridFormat(Exception):
+    """Raised when the AP/AR grid format cannot be auto-detected or normalized."""
+    
+    def __init__(self, message: str, errors: Optional[List[Error]] = None):
+        super().__init__(message)
+        self.errors = errors or []
+
+
+class BalanceError(Exception):
+    """Raised when Beginning Balance Sheet does not balance."""
+    
+    def __init__(self, message: str, errors: Optional[List[Error]] = None):
+        super().__init__(message)
+        self.errors = errors or []
+
+
 def report(errors: List[Error]) -> List[Dict[str, Any]]:
     """
     Generate structured error reports in JSON format.

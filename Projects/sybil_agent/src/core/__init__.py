@@ -11,7 +11,7 @@ normalizing data, and generating a 17-column USD Journal covering 13 weeks.
 __version__ = "0.1.0"
 
 from .models import BeginningBS, GAAPMapping, CashflowMapping, APGridEvent
-from .errors import MappingConflict, SchemaError, report
+from .errors import MappingConflict, SchemaError, UnsupportedGridFormat, BalanceError, report
 from .loader import load_workbook
 from .validator import validate_all
 from .generator import build_projected_journal
@@ -24,6 +24,8 @@ __all__ = [
     "APGridEvent",
     "MappingConflict",
     "SchemaError",
+    "UnsupportedGridFormat",
+    "BalanceError",
     "report",
     "load_workbook",
     "validate_all",
