@@ -22,15 +22,20 @@ class Error:
     hint: str
 
 
-class SchemaError(Exception):
-    """Raised when a workbook doesn't match the expected schema."""
+class ValidationError(Exception):
+    """Base class for all validation errors."""
     
     def __init__(self, message: str, errors: Optional[List[Error]] = None):
         super().__init__(message)
         self.errors = errors or []
 
 
-class MappingConflict(Exception):
+class SchemaError(ValidationError):
+    """Raised when a workbook doesn't match the expected schema."""
+    pass
+
+
+class MappingConflict(ValidationError):
     """Raised when GL accounts cannot be mapped to GAAP or Cash-Flow buckets."""
     
     def __init__(self, message: str, errors: Optional[List[Error]] = None):
@@ -38,20 +43,14 @@ class MappingConflict(Exception):
         self.errors = errors or []
 
 
-class UnsupportedGridFormat(Exception):
+class UnsupportedGridFormat(ValidationError):
     """Raised when the AP/AR grid format cannot be auto-detected or normalized."""
-    
-    def __init__(self, message: str, errors: Optional[List[Error]] = None):
-        super().__init__(message)
-        self.errors = errors or []
+    pass
 
 
-class BalanceError(Exception):
+class BalanceError(ValidationError):
     """Raised when Beginning Balance Sheet does not balance."""
-    
-    def __init__(self, message: str, errors: Optional[List[Error]] = None):
-        super().__init__(message)
-        self.errors = errors or []
+    pass
 
 
 def report(errors: List[Error]) -> List[Dict[str, Any]]:
@@ -78,4 +77,36 @@ def report(errors: List[Error]) -> List[Dict[str, Any]]:
             "hint": error.hint
         }
         for error in errors
-    ] 
+    ]
+
+
+def format_error_json(exception: ValidationError) -> str:
+    """
+    Format a ValidationError as JSON for CLI output.
+    
+    Args:
+        exception: ValidationError instance to format
+        
+    Returns:
+        JSON string with status and errors array
+    """
+    error_data = {
+        "status": "error",
+        "errors": []
+    }
+    
+    if hasattr(exception, 'errors') and exception.errors:
+        for error in exception.errors:
+            error_data["errors"].append({
+                "type": exception.__class__.__name__,
+                "message": error.issue,
+                "suggestion": error.hint
+            })
+    else:
+        error_data["errors"].append({
+            "type": exception.__class__.__name__,
+            "message": str(exception),
+            "suggestion": "Check input data and try again."
+        })
+    
+    return json.dumps(error_data, indent=2) 

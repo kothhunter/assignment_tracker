@@ -14,9 +14,12 @@ from pathlib import Path
 import pandas as pd
 
 from .core.loader import load_all_workbooks
+from .core.normaliser import normalise_cash_grid
 from .core.validator import validate_all
 from .core.generator import build_projected_journal
-from .core.errors import SchemaError, MappingConflict, report
+from .core.exporter import write_excel
+from .core.errors import ValidationError, format_error_json
+from .core.logging import get_logger
 
 
 def main():
@@ -26,106 +29,111 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example usage:
-  python -m projected_journal.cli \\
-    --bs "Beginning Balance Sheet.xlsx" \\
-    --gaap "GAAP Mapping.xlsx" \\
-    --cf "Cashflow Mapping.xlsx" \\
-    --ap "AP Cash Grid.xlsx" \\
-    --out "Journal.xlsx"
+  python -m sybil_cli \\
+    --ap-grid data/AP Cash Grid.xlsx \\
+    --bs data/Beginning Balance Sheet.xlsx \\
+    --gaap-map data/GAAP Mapping.xlsx \\
+    --cf-map data/Cashflow Mapping.xlsx \\
+    --out out/Projected_Journal.xlsx
         """
     )
     
     parser.add_argument(
-        "--bs", 
-        required=True,
-        help="Path to Beginning Balance Sheet.xlsx"
-    )
-    parser.add_argument(
-        "--gaap",
-        required=True, 
-        help="Path to GAAP Mapping.xlsx"
-    )
-    parser.add_argument(
-        "--cf",
-        required=True,
-        help="Path to Cashflow Mapping.xlsx"
-    )
-    parser.add_argument(
-        "--ap",
+        "--ap-grid", 
         required=True,
         help="Path to AP Cash Grid.xlsx"
     )
     parser.add_argument(
-        "--out",
-        required=True,
-        help="Output path for generated Journal.xlsx"
+        "--bs",
+        required=True, 
+        help="Path to Beginning Balance Sheet.xlsx"
     )
     parser.add_argument(
-        "--validate-only",
+        "--gaap-map",
+        required=True,
+        help="Path to GAAP Mapping.xlsx"
+    )
+    parser.add_argument(
+        "--cf-map",
+        required=True,
+        help="Path to Cashflow Mapping.xlsx"
+    )
+    parser.add_argument(
+        "--out",
+        required=True,
+        help="Output path for generated Projected_Journal.xlsx"
+    )
+    parser.add_argument(
+        "--verbose",
         action="store_true",
-        help="Only validate inputs without generating journal"
+        help="Enable verbose logging"
     )
     
     args = parser.parse_args()
     
+    # Configure logging
+    log_level = "INFO" if args.verbose else "WARNING"
+    logger = get_logger(__name__, log_level)
+    
     try:
         # Validate input files exist
-        for file_path in [args.bs, args.gaap, args.cf, args.ap]:
+        input_files = {
+            "AP Cash Grid": args.ap_grid,
+            "Beginning Balance Sheet": args.bs,
+            "GAAP Mapping": args.gaap_map,
+            "Cashflow Mapping": args.cf_map
+        }
+        
+        for file_type, file_path in input_files.items():
             if not Path(file_path).exists():
-                print(f"Error: File not found: {file_path}", file=sys.stderr)
+                error_msg = f"Input file not found: {file_path}"
+                logger.error(error_msg)
+                print(f"Error: {error_msg}", file=sys.stderr)
                 sys.exit(1)
         
-        # Load all workbooks
-        print("Loading workbooks...")
-        bundle = load_all_workbooks(args.bs, args.gaap, args.cf, args.ap)
+        logger.info("Starting projected journal generation")
         
-        # Validate loaded data
-        print("Validating data...")
-        validation_errors = validate_all(bundle)
+        # Pipeline Step 1: Load all workbooks (includes normalization)
+        logger.info("Loading workbooks...")
+        bundle = load_all_workbooks(args.bs, args.gaap_map, args.cf_map, args.ap_grid)
         
-        if validation_errors:
-            print("Validation errors found:", file=sys.stderr)
-            error_reports = report(validation_errors)
-            for error_report in error_reports:
-                print(f"  {error_report['file']}:{error_report['row']} - {error_report['issue']}", file=sys.stderr)
-                print(f"    Hint: {error_report['hint']}", file=sys.stderr)
-            sys.exit(1)
+        # Pipeline Step 2: Validate all data
+        logger.info("Validating data...")
+        validate_all(bundle)
         
-        print("Validation passed!")
+        # Pipeline Step 3: Generate projected journal
+        logger.info("Generating projected journal...")
+        journal = build_projected_journal(bundle)
         
-        if args.validate_only:
-            print("Validation-only mode: exiting without generating journal.")
-            sys.exit(0)
+        # Pipeline Step 5: Export to Excel
+        logger.info(f"Exporting to {args.out}...")
+        output_path = Path(args.out)
+        write_excel(journal, output_path)
         
-        # Generate projected journal
-        print("Generating projected journal...")
-        journal_df = build_projected_journal(bundle)
-        
-        # Write output
-        print(f"Writing journal to {args.out}...")
-        journal_df.to_excel(args.out, index=False)
-        
+        logger.info(f"Successfully generated journal: {args.out}")
+        logger.info(f"Journal contains {len(journal)} entries")
         print(f"Successfully generated journal: {args.out}")
-        print(f"Journal contains {len(journal_df)} entries")
+        print(f"Journal contains {len(journal)} entries")
         
-    except SchemaError as e:
-        print(f"Schema error: {e}", file=sys.stderr)
-        if hasattr(e, 'errors') and e.errors:
-            error_reports = report(e.errors)
-            for error_report in error_reports:
-                print(f"  {error_report['file']}:{error_report['row']} - {error_report['issue']}", file=sys.stderr)
-        sys.exit(1)
-        
-    except MappingConflict as e:
-        print(f"Mapping conflict: {e}", file=sys.stderr)
-        if hasattr(e, 'errors') and e.errors:
-            error_reports = report(e.errors)
-            for error_report in error_reports:
-                print(f"  {error_report['file']}:{error_report['row']} - {error_report['issue']}", file=sys.stderr)
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        error_json = format_error_json(e)
+        print(error_json, file=sys.stderr)
         sys.exit(1)
         
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        logger.error(f"Unexpected error: {e}")
+        # For unexpected errors, create a minimal JSON response
+        error_data = {
+            "status": "error",
+            "errors": [{
+                "type": "UnexpectedError",
+                "message": str(e),
+                "suggestion": "Check input files and try again. Enable --verbose for more details."
+            }]
+        }
+        import json
+        print(json.dumps(error_data, indent=2), file=sys.stderr)
         sys.exit(1)
 
 

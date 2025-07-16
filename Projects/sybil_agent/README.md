@@ -18,16 +18,32 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Command Line Interface
+## Quick Start
+
+Generate a projected journal from your four input workbooks:
 
 ```bash
-python -m src.cli \
-  --bs "Beginning Balance Sheet.xlsx" \
-  --gaap "GAAP Mapping.xlsx" \
-  --cf "Cashflow Mapping.xlsx" \
-  --ap "AP Cash Grid.xlsx" \
-  --out "Journal.xlsx"
+python -m sybil_cli \
+  --ap-grid data/AP Cash Grid.xlsx \
+  --bs data/Beginning Balance Sheet.xlsx \
+  --gaap-map data/GAAP Mapping.xlsx \
+  --cf-map data/Cashflow Mapping.xlsx \
+  --out out/Projected_Journal.xlsx
 ```
+
+For detailed logging, add the `--verbose` flag:
+
+```bash
+python -m sybil_cli \
+  --ap-grid data/AP Cash Grid.xlsx \
+  --bs data/Beginning Balance Sheet.xlsx \
+  --gaap-map data/GAAP Mapping.xlsx \
+  --cf-map data/Cashflow Mapping.xlsx \
+  --out out/Projected_Journal.xlsx \
+  --verbose
+```
+
+### Command Line Interface
 
 ### Python API
 
@@ -69,11 +85,17 @@ src/
 │   ├── normaliser.py   # Cash-grid normalization
 │   ├── validator.py    # Schema + mapping checks
 │   ├── generator.py    # Build projected journal
+│   ├── exporter.py     # Excel export with styling
+│   ├── logging.py      # Logging utilities
 │   └── errors.py       # Error handling and reporting
-├── cli.py              # Simple CLI wrapper
+├── cli.py              # Command-line interface
 tests/
 ├── test_loader.py
-└── test_validator.py
+├── test_validator.py
+├── test_normaliser.py
+├── test_exporter.py
+├── test_cli_end_to_end.py
+└── test_cli_validation_error.py
 ```
 
 ## Requirements
