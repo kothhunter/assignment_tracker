@@ -1,0 +1,74 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/health/route.ts": {
+      "maxDuration": 10
+    },
+    "src/app/api/health/detailed/route.ts": {
+      "maxDuration": 15
+    },
+    "src/app/api/trpc/[trpc]/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    },
+    {
+      "source": "/monitoring",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/health",
+      "destination": "/api/health",
+      "permanent": false
+    },
+    {
+      "source": "/status",
+      "destination": "/api/health/detailed",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/monitoring",
+      "destination": "https://sentry.io"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://your-app.vercel.app",
+    "DEPLOYMENT_PLATFORM": "vercel"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "NEXT_TELEMETRY_DISABLED": "1"
+    }
+  }
+}

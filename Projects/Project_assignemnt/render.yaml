@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: project-assignment
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: 1
+      - key: DEPLOYMENT_PLATFORM
+        value: render
+      - key: NEXT_PUBLIC_APP_URL
+        fromService:
+          type: web
+          name: project-assignment
+          property: host
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 70
+      targetCPUPercent: 70

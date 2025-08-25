@@ -1,0 +1,40 @@
+# Configuration for automatically labeling PRs based on file changes
+
+frontend:
+  - src/components/**/*
+  - src/app/**/*
+  - src/styles/**/*
+
+backend:
+  - src/server/**/*
+  - src/lib/**/*
+
+database:
+  - "**/*.sql"
+  - database-*.sql
+  - scripts/**/*
+
+tests:
+  - "**/*.test.*"
+  - "**/*.spec.*" 
+  - "**/__tests__/**/*"
+  - tests/**/*
+
+docs:
+  - "**/*.md"
+  - docs/**/*
+
+ci:
+  - .github/**/*
+  - "*.yml"
+  - "*.yaml"
+
+dependencies:
+  - package.json
+  - package-lock.json
+  - "*.config.*"
+
+security:
+  - "audit-ci.json"
+  - ".github/workflows/codeql.yml"
+  - ".github/codeql/**/*"

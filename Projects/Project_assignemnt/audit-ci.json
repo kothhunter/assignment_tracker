@@ -1,0 +1,9 @@
+{
+  "moderate": true,
+  "allowlist": [],
+  "skip-dev": false,
+  "advisories": [],
+  "whitelist": [],
+  "report-type": "important",
+  "output-format": "text"
+}

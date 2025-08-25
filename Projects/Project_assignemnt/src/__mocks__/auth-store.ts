@@ -1,0 +1,15 @@
+export const useAuthStore = jest.fn(() => ({
+  user: null,
+  session: null,
+  profile: null,
+  isLoading: false,
+  isInitialized: true,
+  setUser: jest.fn(),
+  setSession: jest.fn(),
+  setProfile: jest.fn(),
+  setLoading: jest.fn(),
+  setInitialized: jest.fn(),
+  signOut: jest.fn().mockResolvedValue(undefined),
+  initialize: jest.fn(),
+  reset: jest.fn(),
+}));
