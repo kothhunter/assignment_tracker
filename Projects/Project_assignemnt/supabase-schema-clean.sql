@@ -1,20 +1,27 @@
 -- Project Assignment Tracker Database Schema
--- Run this in your Supabase SQL Editor
+-- Clean installation - Run this in your Supabase SQL Editor
 
--- First, let's drop any existing tables to avoid conflicts
--- (Remove these lines if you want to keep existing data)
-DROP TABLE IF EXISTS public.plan_refinement_messages CASCADE;
-DROP TABLE IF EXISTS public.assignment_plans CASCADE;
-DROP TABLE IF EXISTS public.files CASCADE;
-DROP TABLE IF EXISTS public.assignments CASCADE;
-DROP TABLE IF EXISTS public.classes CASCADE;
-DROP TABLE IF EXISTS public.user_profiles CASCADE;
+-- First, safely drop any existing conflicting tables
+DO $$ 
+BEGIN
+    -- Drop tables in reverse dependency order
+    DROP TABLE IF EXISTS public.plan_refinement_messages CASCADE;
+    DROP TABLE IF EXISTS public.files CASCADE;
+    DROP TABLE IF EXISTS public.assignment_plans CASCADE;
+    DROP TABLE IF EXISTS public.assignments CASCADE;
+    DROP TABLE IF EXISTS public.classes CASCADE;
+    DROP TABLE IF EXISTS public.user_profiles CASCADE;
+    
+    -- Drop any existing functions
+    DROP FUNCTION IF EXISTS public.handle_updated_at() CASCADE;
+    DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+END $$;
 
--- Enable Row Level Security for all tables
+-- Start fresh
 BEGIN;
 
 -- User Profiles table (extends Supabase auth.users)
-CREATE TABLE IF NOT EXISTS public.user_profiles (
+CREATE TABLE public.user_profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     email TEXT NOT NULL,
@@ -30,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 );
 
 -- Classes table
-CREATE TABLE IF NOT EXISTS public.classes (
+CREATE TABLE public.classes (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
@@ -48,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.classes (
 );
 
 -- Assignments table
-CREATE TABLE IF NOT EXISTS public.assignments (
+CREATE TABLE public.assignments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     class_id UUID REFERENCES public.classes(id) ON DELETE CASCADE NOT NULL,
@@ -70,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.assignments (
 );
 
 -- Assignment Plans table (AI-generated plans)
-CREATE TABLE IF NOT EXISTS public.assignment_plans (
+CREATE TABLE public.assignment_plans (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     assignment_id UUID REFERENCES public.assignments(id) ON DELETE CASCADE NOT NULL UNIQUE,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -87,7 +94,7 @@ CREATE TABLE IF NOT EXISTS public.assignment_plans (
 );
 
 -- Plan Refinement Messages table (AI chat refinements)
-CREATE TABLE IF NOT EXISTS public.plan_refinement_messages (
+CREATE TABLE public.plan_refinement_messages (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     assignment_plan_id UUID REFERENCES public.assignment_plans(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -98,7 +105,7 @@ CREATE TABLE IF NOT EXISTS public.plan_refinement_messages (
 );
 
 -- File uploads table (for syllabus and other files)
-CREATE TABLE IF NOT EXISTS public.files (
+CREATE TABLE public.files (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     class_id UUID REFERENCES public.classes(id) ON DELETE CASCADE,
@@ -113,16 +120,16 @@ CREATE TABLE IF NOT EXISTS public.files (
 );
 
 -- Indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON public.user_profiles(user_id);
-CREATE INDEX IF NOT EXISTS idx_classes_user_id ON public.classes(user_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON public.assignments(user_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_class_id ON public.assignments(class_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_due_date ON public.assignments(due_date);
-CREATE INDEX IF NOT EXISTS idx_assignments_status ON public.assignments(status);
-CREATE INDEX IF NOT EXISTS idx_assignment_plans_user_id ON public.assignment_plans(user_id);
-CREATE INDEX IF NOT EXISTS idx_assignment_plans_assignment_id ON public.assignment_plans(assignment_id);
-CREATE INDEX IF NOT EXISTS idx_plan_refinement_messages_plan_id ON public.plan_refinement_messages(assignment_plan_id);
-CREATE INDEX IF NOT EXISTS idx_files_user_id ON public.files(user_id);
+CREATE INDEX idx_user_profiles_user_id ON public.user_profiles(user_id);
+CREATE INDEX idx_classes_user_id ON public.classes(user_id);
+CREATE INDEX idx_assignments_user_id ON public.assignments(user_id);
+CREATE INDEX idx_assignments_class_id ON public.assignments(class_id);
+CREATE INDEX idx_assignments_due_date ON public.assignments(due_date);
+CREATE INDEX idx_assignments_status ON public.assignments(status);
+CREATE INDEX idx_assignment_plans_user_id ON public.assignment_plans(user_id);
+CREATE INDEX idx_assignment_plans_assignment_id ON public.assignment_plans(assignment_id);
+CREATE INDEX idx_plan_refinement_messages_plan_id ON public.plan_refinement_messages(assignment_plan_id);
+CREATE INDEX idx_files_user_id ON public.files(user_id);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
@@ -222,5 +229,12 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 
 COMMIT;
 
--- Insert some sample data (optional - remove if you don't want sample data)
--- INSERT INTO auth.users (id, email) VALUES ('00000000-0000-0000-0000-000000000001', 'test@example.com');
+-- Verify the schema was created successfully
+SELECT 
+    table_name, 
+    column_name, 
+    data_type 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+    AND table_name IN ('user_profiles', 'classes', 'assignments', 'assignment_plans', 'plan_refinement_messages', 'files')
+ORDER BY table_name, ordinal_position;
