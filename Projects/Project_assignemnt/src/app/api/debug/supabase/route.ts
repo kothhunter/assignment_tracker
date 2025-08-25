@@ -14,13 +14,13 @@ export async function GET(req: NextRequest) {
         urlValue: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30) + '...' || 'Not set'
       },
       connection: {
-        status: 'unknown',
-        error: null
+        status: 'unknown' as 'unknown' | 'success' | 'failed',
+        error: null as string | null
       },
       auth: {
         hasSession: false,
-        user: null,
-        error: null
+        user: null as any,
+        error: null as string | null
       }
     };
 
